@@ -174,6 +174,12 @@ func main() {
 					text += fmt.Sprintf("	%s = %s;  // %s\n", name, num, proto)
 				}
 			}
+		case "haiku":
+			if t.Match(`^(SYSCALL)([0-9]+)\(_kern(.*), ([0-9]+)\)$`) {
+				name, num := t.sub[3], t.sub[4]
+				name = strings.ToUpper(name)
+				text += fmt.Sprintf("\tSYS%s = %s\n", name, num)
+			}
 		default:
 			fmt.Fprintf(os.Stderr, "unrecognized GOOS=%s\n", goos)
 			os.Exit(1)

@@ -148,6 +148,23 @@ includes_FreeBSD='
 #endif
 '
 
+includes_Haiku='
+#include <sys/types.h>
+#include <sys/file.h>
+#include <fcntl.h>
+#include <dirent.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/ip6.h>
+#include <netinet/tcp.h>
+#include <errno.h>
+#include <signal.h>
+#include <sys/resource.h>
+#include <sys/mman.h>
+#include <termios.h>
+'
+
 includes_Linux='
 #define _LARGEFILE_SOURCE
 #define _LARGEFILE64_SOURCE
@@ -433,18 +450,27 @@ includes='
 #include <sys/types.h>
 #include <sys/file.h>
 #include <fcntl.h>
-#include <dirent.h>
-#include <sys/socket.h>
+#include <dirent.h> #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 #include <netinet/tcp.h>
 #include <errno.h>
+'
+if [ "$(uname)" != "Haiku" ]
+then
+includes="
+${includes}
 #include <sys/signal.h>
+"
+fi
+includes="
+${includes}
 #include <signal.h>
 #include <sys/resource.h>
-#include <time.h>
-'
+"
+
+
 ccflags="$@"
 
 # Write go tool cgo -godefs input.
@@ -638,13 +664,24 @@ errors=$(
 	sort
 )
 
+if [ "$(uname)" = "Haiku" ]
+then
+# FIXME: haiku: 64-bit?
+signals=$(
+	echo '#include <signal.h>' | $CC -x c - -E -dM $ccflags |
+	awk '$1=="#define" && $2 ~ /^SIG[A-Z0-9]+$/ { print $2 }' |
+	egrep -v '(SIGSTKSIZE|SIGSTKSZ|SIGRT)' |
+	sort
+)
+else
 # Pull out the signal names for later.
 signals=$(
 	echo '#include <signal.h>' | $CC -x c - -E -dM $ccflags |
 	awk '$1=="#define" && $2 ~ /^SIG[A-Z0-9]+$/ { print $2 }' |
-	grep -v 'SIGSTKSIZE\|SIGSTKSZ\|SIGRT\|SIGMAX64' |
+	grep -v 'SIGSTKSIZE\|SIGSTKSZ\|SIGRT' |
 	sort
 )
+fi
 
 # Again, writing regexps to a file.
 echo '#include <errno.h>' | $CC -x c - -E -dM $ccflags |
@@ -666,7 +703,15 @@ cat _error.out | grep -vf _error.grep | grep -vf _signal.grep
 echo
 echo '// Errors'
 echo 'const ('
-cat _error.out | grep -f _error.grep | sed 's/=\(.*\)/= syscall.Errno(\1)/'
+
+if [ "$(uname)" = "Haiku" ]
+then
+# FIXME: haiku: 64-bit?
+	cat _error.out | grep -f _error.grep | sed 's/=\(.*\)/= Errno(\1 \& 0xffffffff)/'
+else
+	cat _error.out | grep -f _error.grep | sed 's/=\(.*\)/= Errno(\1)/'
+fi
+
 echo ')'
 
 echo
@@ -742,6 +787,9 @@ main(void)
 		// lowercase first letter: Bad -> bad, but STREAM -> STREAM.
 		if(A <= buf[0] && buf[0] <= Z && a <= buf[1] && buf[1] <= z)
 			buf[0] += a - A;
+'
+		[ "$uname" = "Haiku" ] && echo 'e = e == 0? e: (e & 0x7fffffff) + 1;'
+    echo -E '
 		printf("\t{ %d, \"%s\", \"%s\" },\n", e, errors[i].name, buf);
 	}
 	printf("}\n\n");
