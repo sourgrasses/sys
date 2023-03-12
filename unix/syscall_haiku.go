@@ -13,8 +13,8 @@
 package unix
 
 import (
-    "syscall"
-    "unsafe"
+	"syscall"
+	"unsafe"
 )
 
 // Implemented in asm_haiku_amd64.s.
@@ -133,7 +133,7 @@ func Getsockname(fd int) (sa Sockaddr, err error) {
 	if err = getsockname(fd, &rsa, &len); err != nil {
 		return
 	}
-	return anyToSockaddr(&rsa)
+	return anyToSockaddr(fd, &rsa)
 }
 
 // The const provides a compile-time constant so clients
@@ -290,7 +290,7 @@ func FcntlFlock(fd uintptr, cmd int, lk *Flock_t) error {
 	return nil
 }
 
-func anyToSockaddr(rsa *RawSockaddrAny) (Sockaddr, error) {
+func anyToSockaddr(fd int, rsa *RawSockaddrAny) (Sockaddr, error) {
 	switch rsa.Addr.Family {
 	case AF_UNIX:
 		pp := (*RawSockaddrUnix)(unsafe.Pointer(rsa))
@@ -341,7 +341,7 @@ func Accept(fd int) (nfd int, sa Sockaddr, err error) {
 	if err != nil {
 		return
 	}
-	sa, err = anyToSockaddr(&rsa)
+	sa, err = anyToSockaddr(fd, &rsa)
 	if err != nil {
 		Close(nfd)
 		nfd = 0
