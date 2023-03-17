@@ -143,6 +143,9 @@ type Inet6Pktinfo C.struct_in6_pktinfo
 
 type ICMPv6Filter C.struct_icmp6_filter
 
+// Dummy struct for now since this isn't implemented in Haiku yet
+type IPv6MTUInfo struct {}
+
 const (
 	SizeofSockaddrInet4    = C.sizeof_struct_sockaddr_in
 	SizeofSockaddrInet6    = C.sizeof_struct_sockaddr_in6
@@ -152,6 +155,7 @@ const (
 	SizeofLinger           = C.sizeof_struct_linger
 	SizeofIPMreq           = C.sizeof_struct_ip_mreq
 	SizeofIPv6Mreq         = C.sizeof_struct_ipv6_mreq
+	SizeofIPv6MTUInfo      = 0x00
 	SizeofMsghdr           = C.sizeof_struct_msghdr
 	SizeofCmsghdr          = C.sizeof_struct_cmsghdr
 	SizeofInet6Pktinfo     = C.sizeof_struct_in6_pktinfo
@@ -165,6 +169,14 @@ type FdSet C.fd_set
 // Terminal handling
 
 type Termios C.struct_termios
+
+const (
+	AT_FDCWD            = C.AT_FDCWD
+	AT_EACCESS          = C.AT_EACCESS
+	AT_SYMLINK_NOFOLLOW = C.AT_SYMLINK_NOFOLLOW
+	AT_SYMLINK_FOLLOW   = C.AT_SYMLINK_FOLLOW
+	AT_REMOVEDIR        = C.AT_REMOVEDIR
+)
 
 // Fake constant needed by net package
 
