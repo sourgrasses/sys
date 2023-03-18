@@ -267,16 +267,38 @@ func Gethostname() (name string, err error) {
 	return name, err
 }
 
-func UtimesNano(path string, ts []Timespec) (err error) {
+//sys	utimes(path string, times *[2]Timeval) (err error)
+
+func Utimes(path string, tv []Timeval) error {
+	if tv == nil {
+		return utimes(path, nil)
+	}
+	if len(tv) != 2 {
+		return EINVAL
+	}
+	return utimes(path, (*[2]Timeval)(unsafe.Pointer(&tv[0])))
+}
+
+//sys	utimensat(fd int, path string, times *[2]Timespec, flag int) (err error)
+
+func UtimesNano(path string, ts []Timespec) error {
+	if ts == nil {
+		return utimensat(AT_FDCWD, path, nil, 0)
+	}
 	if len(ts) != 2 {
 		return EINVAL
 	}
-	var tv [2]Timeval
-	for i := 0; i < 2; i++ {
-		tv[i].Sec = ts[i].Sec
-		tv[i].Usec = int32(ts[i].Nsec / 1000)
+	return utimensat(AT_FDCWD, path, (*[2]Timespec)(unsafe.Pointer(&ts[0])), 0)
+}
+
+func UtimesNanoAt(dirfd int, path string, ts []Timespec, flags int) error {
+	if ts == nil {
+		return utimensat(dirfd, path, nil, flags)
 	}
-	return Utimes(path, (*[2]Timeval)(unsafe.Pointer(&tv[0])))
+	if len(ts) != 2 {
+		return EINVAL
+	}
+	return utimensat(dirfd, path, (*[2]Timespec)(unsafe.Pointer(&ts[0])), flags)
 }
 
 //sys	fcntl(fd int, cmd int, arg int) (val int, err error)
@@ -375,6 +397,8 @@ func recvmsgRaw(fd int, iov []Iovec, oob []byte, flags int, rsa *RawSockaddrAny)
 	return
 }
 
+//sys	sendmsg(s int, msg *Msghdr, flags int) (n int, err error) = libsocket.sendmsg
+
 func sendmsgN(fd int, iov []Iovec, oob []byte, ptr unsafe.Pointer, salen _Socklen, flags int) (n int, err error) {
 	var msg Msghdr
 	msg.Name = (*byte)(unsafe.Pointer(ptr))
@@ -472,7 +496,6 @@ func sendmsgN(fd int, iov []Iovec, oob []byte, ptr unsafe.Pointer, salen _Sockle
 //sys	Umask(newmask int) (oldmask int)
 //sysnb	Uname(buf *Utsname) (err error)
 //sys	Unlink(path string) (err error)
-//sys	Utimes(path string, times *[2]Timeval) (err error)
 //sys	bind(s int, addr unsafe.Pointer, addrlen _Socklen) (err error) = libsocket.bind
 //sys	connect(s int, addr unsafe.Pointer, addrlen _Socklen) (err error) = libsocket.connect
 //sys	mmap(addr uintptr, length uintptr, prot int, flag int, fd int, pos int64) (ret uintptr, err error)
