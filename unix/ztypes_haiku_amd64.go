@@ -240,9 +240,9 @@ const (
 )
 
 type Utsname struct {
-	Sysname  [32]int8
-	Nodename [32]int8
-	Release  [32]int8
-	Version  [32]int8
-	Machine  [32]int8
+	Sysname  [32]byte
+	Nodename [32]byte
+	Release  [32]byte
+	Version  [32]byte
+	Machine  [32]byte
 }
